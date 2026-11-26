@@ -1,21 +1,21 @@
 {
- "key": "87c3fcbe",
- "stars": 6,
+ "key": "9fc0ebd7",
+ "stars": 7,
  "contributions": 203,
  "repos": 13,
  "followers": 1,
  "languages": [
   [
    "JavaScript",
-   2006342
+   2145834
   ],
   [
    "CSS",
-   497228
+   496748
   ],
   [
    "HTML",
-   259407
+   257529
   ],
   [
    "TypeScript",
@@ -30,82 +30,100 @@
   [
    {
     "c": 0,
-    "day": 8
-   },
-   {
-    "c": 2,
-    "day": 9
-   },
-   {
-    "c": 5,
-    "day": 10
-   },
-   {
-    "c": 3,
-    "day": 11
-   },
-   {
-    "c": 1,
-    "day": 12
+    "day": 8,
+    "today": false
    },
    {
     "c": 0,
-    "day": 13
+    "day": 9,
+    "today": false
    },
    {
-    "c": 2,
-    "day": 14
+    "c": 0,
+    "day": 10,
+    "today": false
+   },
+   {
+    "c": 0,
+    "day": 11,
+    "today": false
+   },
+   {
+    "c": 0,
+    "day": 12,
+    "today": false
+   },
+   {
+    "c": 0,
+    "day": 13,
+    "today": false
+   },
+   {
+    "c": 0,
+    "day": 14,
+    "today": false
    }
   ],
   [
    {
     "c": 9,
-    "day": 15
-   },
-   {
-    "c": 4,
-    "day": 16
-   },
-   {
-    "c": 6,
-    "day": 17
+    "day": 15,
+    "today": false
    },
    {
     "c": 8,
-    "day": 18
-   },
-   {
-    "c": 2,
-    "day": 19
+    "day": 16,
+    "today": false
    },
    {
     "c": 0,
-    "day": 20
+    "day": 17,
+    "today": false
    },
    {
-    "c": 1,
-    "day": 21
+    "c": 6,
+    "day": 18,
+    "today": false
+   },
+   {
+    "c": 0,
+    "day": 19,
+    "today": false
+   },
+   {
+    "c": 3,
+    "day": 20,
+    "today": false
+   },
+   {
+    "c": 0,
+    "day": 21,
+    "today": false
    }
   ],
   [
    {
-    "c": 3,
-    "day": 22
+    "c": 0,
+    "day": 22,
+    "today": false
    },
    {
     "c": 0,
-    "day": 23
+    "day": 23,
+    "today": false
    },
    {
-    "c": 5,
-    "day": 24
+    "c": 0,
+    "day": 24,
+    "today": false
    },
    {
     "c": 4,
-    "day": 25
+    "day": 25,
+    "today": false
    },
    {
-    "c": 7,
+    "c": 12,
     "day": 26,
     "today": true
    },
@@ -114,37 +132,56 @@
   ]
  ],
  "streak": {
-  "current": 3,
-  "longest": 9
+  "current": 2,
+  "longest": 2
  },
- "pins": [
-  {
-   "name": "tiktok-octo",
-   "url": "https://github.com/octomood/tiktok-octo",
-   "text": "TikTok octo — неофициальный десктоп-клиент TikTok на Electron: официальный сайт в нативном окне, без API и парсинга.",
-   "fork": false,
-   "stars": 5,
-   "language": "JavaScript",
-   "topics": []
-  },
-  {
-   "name": "octo-load",
-   "url": "https://github.com/octomood/octo-load",
-   "text": "OctoLoad — Telegram bot: video, audio and photos by link",
-   "fork": false,
-   "stars": 0,
-   "language": "Python",
-   "topics": []
-  }
- ],
+ "pins": [],
  "all": [
   {
    "name": "tiktok-octo",
    "url": "https://github.com/octomood/tiktok-octo",
-   "text": "TikTok octo — неофициальный десктоп-клиент TikTok на Electron: официальный сайт в нативном окне, без API и парсинга.",
+   "text": "TikTok octo — неофициальный десктоп-клиент TikTok на Electron: официальный сайт в нативном окне, без API и парсинга. • Unofficial TikTok desktop shell for Linux, Windows & macOS — the real site in a native window, no API, no scraping.",
    "fork": false,
-   "stars": 5,
+   "stars": 6,
    "language": "JavaScript",
+   "topics": [
+    "custom-titlebar",
+    "desktop-app",
+    "electron",
+    "javascript",
+    "linux",
+    "macos",
+    "picture-in-picture",
+    "tiktok",
+    "tray",
+    "windows"
+   ]
+  },
+  {
+   "name": "my-soundpad",
+   "url": "https://github.com/octomood/my-soundpad",
+   "text": "",
+   "fork": false,
+   "stars": 1,
+   "language": "Python",
+   "topics": []
+  },
+  {
+   "name": "octomood",
+   "url": "https://github.com/octomood/octomood",
+   "text": "",
+   "fork": false,
+   "stars": 0,
+   "language": null,
+   "topics": []
+  },
+  {
+   "name": "exDesktopWebsite",
+   "url": "https://github.com/octomood/exDesktopWebsite",
+   "text": "",
+   "fork": false,
+   "stars": 0,
+   "language": "TypeScript",
    "topics": []
   },
   {
