@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""Generate animated Material Design 3 Expressive SVG cards and GitHub Profile README.md.
+"""Generate animated Material Design 3 SVG cards and GitHub Profile README.md.
 
 Zero external dependencies: uses only Python standard library.
-- Borderless M3 tonal Surface Containers (m3.material.io aesthetic)
-- Embedded base64 avatar inside an animated rotating M3 scalloped frame
-- Smooth SVG SMIL + CSS animations compatible with GitHub's <img> SVG sandbox
-- Percentage widths in README.md so 2 projects & 3 contact pills stay side-by-side
+Outputs SVGs into assets/v3/ to bypass GitHub Camo CDN caching cleanly.
 """
 
 from __future__ import annotations
@@ -16,6 +13,7 @@ import html
 import json
 import math
 import os
+import shutil
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -23,7 +21,9 @@ from typing import Any
 
 ROOT_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT_DIR / "profile.config.json"
-ASSETS_DIR = ROOT_DIR / "assets"
+ASSETS_BASE = ROOT_DIR / "assets"
+ASSET_VERSION = "v3"
+ASSETS_DIR = ASSETS_BASE / ASSET_VERSION
 README_PATH = ROOT_DIR / "README.md"
 
 FONT_SANS = (
@@ -33,54 +33,44 @@ FONT_SANS = (
 
 THEMES: dict[str, dict[str, str]] = {
     "light": {
-        "surface": "#FEF7FF",
+        "surfaceContainer": "#F4EFFA",
+        "surfaceContainerHigh": "#EAE2F4",
+        "surfaceContainerHighest": "#DFD5EC",
         "surfaceContainerLowest": "#FFFFFF",
-        "surfaceContainerLow": "#F7F2FA",
-        "surfaceContainer": "#F3EDF7",
-        "surfaceContainerHigh": "#EAE3F2",
-        "surfaceContainerHighest": "#E4DCEB",
         "primary": "#6750A4",
-        "onPrimary": "#FFFFFF",
         "primaryContainer": "#EADDFF",
         "onPrimaryContainer": "#21005D",
-        "secondary": "#006B5E",
-        "onSecondary": "#FFFFFF",
-        "secondaryContainer": "#B8F3E5",
-        "onSecondaryContainer": "#00201B",
-        "tertiary": "#7D5260",
-        "onTertiary": "#FFFFFF",
-        "tertiaryContainer": "#FFD8E4",
-        "onTertiaryContainer": "#31111D",
+        "secondary": "#236B5D",
+        "secondaryContainer": "#CBEFE5",
+        "onSecondaryContainer": "#072D25",
+        "tertiary": "#82495D",
+        "tertiaryContainer": "#FFD9E3",
+        "onTertiaryContainer": "#381220",
         "onSurface": "#1D1B20",
         "onSurfaceVariant": "#49454F",
-        "heroShapeA": "#D0BCFF",
-        "heroShapeB": "#8FE8D4",
-        "heroShapeC": "#F6C8D8",
+        "blobA": "#DECFFF",
+        "blobB": "#C7EFE4",
+        "blobC": "#FFD6E2",
     },
     "dark": {
-        "surface": "#141218",
-        "surfaceContainerLowest": "#0F0D13",
-        "surfaceContainerLow": "#1D1B20",
-        "surfaceContainer": "#221F27",
-        "surfaceContainerHigh": "#2D2A34",
-        "surfaceContainerHighest": "#373340",
+        "surfaceContainer": "#1E1B24",
+        "surfaceContainerHigh": "#282430",
+        "surfaceContainerHighest": "#332E3D",
+        "surfaceContainerLowest": "#141218",
         "primary": "#D0BCFF",
-        "onPrimary": "#381E72",
-        "primaryContainer": "#4F378B",
-        "onPrimaryContainer": "#EADDFF",
-        "secondary": "#7ADBC8",
-        "onSecondary": "#00382F",
-        "secondaryContainer": "#134D44",
-        "onSecondaryContainer": "#B8F3E5",
-        "tertiary": "#EFB8C8",
-        "onTertiary": "#492532",
-        "tertiaryContainer": "#633B48",
-        "onTertiaryContainer": "#FFD8E4",
-        "onSurface": "#E6E0E9",
-        "onSurfaceVariant": "#CAC4D0",
-        "heroShapeA": "#4F378B",
-        "heroShapeB": "#134D44",
-        "heroShapeC": "#633B48",
+        "primaryContainer": "#43346E",
+        "onPrimaryContainer": "#EDE2FF",
+        "secondary": "#9AD9C8",
+        "secondaryContainer": "#234740",
+        "onSecondaryContainer": "#C7F2E6",
+        "tertiary": "#F0B7C8",
+        "tertiaryContainer": "#593543",
+        "onTertiaryContainer": "#FFD9E3",
+        "onSurface": "#EFEBF5",
+        "onSurfaceVariant": "#C2BCD0",
+        "blobA": "#3D2F63",
+        "blobB": "#1F3F39",
+        "blobC": "#51303E",
     },
 }
 
@@ -117,8 +107,16 @@ def tone_colors(theme: dict[str, str], tone: str) -> tuple[str, str]:
     return mapping.get(tone, mapping["surface"])
 
 
+def accent_color(theme: dict[str, str], tone: str) -> str:
+    mapping = {
+        "primary": theme["primary"],
+        "secondary": theme["secondary"],
+        "tertiary": theme["tertiary"],
+    }
+    return mapping.get(tone, theme["primary"])
+
+
 def scalloped_path(cx: float, cy: float, r_base: float, amp: float, lobes: int = 12) -> str:
-    """Create a smooth Material 3 Expressive scalloped flower/cookie shape."""
     steps = lobes * 16
     pts: list[tuple[float, float]] = []
     for i in range(steps):
@@ -160,7 +158,7 @@ def four_point_star_path(cx: float, cy: float, r_outer: float, r_inner: float) -
     return " ".join(cmds)
 
 
-def wavy_line_path(x_start: float, x_end: float, y_mid: float, amp: float = 4.0, wavelength: float = 28.0) -> str:
+def wavy_line_path(x_start: float, x_end: float, y_mid: float, amp: float = 3.5, wavelength: float = 28.0) -> str:
     half_w = wavelength / 2.0
     x = x_start
     cmds = [f"M {x:.2f} {y_mid:.2f}"]
@@ -239,37 +237,32 @@ def build_hero_svg(cfg: dict[str, Any], theme_name: str) -> str:
     monogram = cfg.get("monogram", "CH")
     chips = cfg.get("hero_chips", [])
 
-    # Left avatar scalloped frame (animated rotation) + stationary scalloped avatar inside
-    ax, ay = 128.0, 134.0
-    outer_scallop = scalloped_path(ax, ay, r_base=82, amp=8.5, lobes=12)
-    inner_scallop = scalloped_path(ax, ay, r_base=69, amp=5.5, lobes=12)
+    ax, ay = 132.0, 134.0
+    outer_scallop = scalloped_path(ax, ay, r_base=84, amp=8.5, lobes=12)
+    inner_scallop = scalloped_path(ax, ay, r_base=72, amp=5.5, lobes=12)
     avatar_uri = load_avatar_data_uri(cfg)
 
     if avatar_uri:
         avatar_inner = (
-            f'<image x="{ax - 76:.1f}" y="{ay - 76:.1f}" width="152" height="152" '
+            f'<image x="{ax - 78:.1f}" y="{ay - 78:.1f}" width="156" height="156" '
             f'preserveAspectRatio="xMidYMid slice" href="{avatar_uri}" xlink:href="{avatar_uri}"/>'
         )
     else:
         avatar_inner = (
-            f'<rect x="{ax - 76:.1f}" y="{ay - 76:.1f}" width="152" height="152" fill="{t["primaryContainer"]}"/>'
+            f'<rect x="{ax - 78:.1f}" y="{ay - 78:.1f}" width="156" height="156" fill="{t["primaryContainer"]}"/>'
             f'<text x="{ax:.1f}" y="{ay + 14:.1f}" text-anchor="middle" font-family="{FONT_SANS}" '
             f'font-size="40" font-weight="800" fill="{t["onPrimaryContainer"]}">{esc(monogram)}</text>'
         )
 
-    # Right decorative animated M3 Expressive shapes (like m3.material.io)
-    right_blob = scalloped_path(788, 66, r_base=74, amp=16.0, lobes=6)
-    right_clover = scalloped_path(732, 214, r_base=36, amp=8.0, lobes=4)
-    right_gear = scalloped_path(816, 174, r_base=24, amp=4.0, lobes=8)
-    spark = four_point_star_path(698, 44, r_outer=14, r_inner=4.5)
+    # Large clean organic M3 blobs on right edge (uncluttered, smooth drift/rotation)
+    blob_top = scalloped_path(792, 64, r_base=88, amp=20.0, lobes=5)
+    blob_bot = scalloped_path(728, 224, r_base=44, amp=10.0, lobes=4)
 
-    # Subtitle cursor position
     role_w = estimate_text_width(role, 17.5, bold=False)
-    caret_x = 248.0 + role_w + 5.0
+    caret_x = 256.0 + role_w + 6.0
 
-    # Chips below subtitle
     chips_svg = []
-    cx = 248.0
+    cx = 256.0
     cy = 186.0
     for item in chips[:3]:
         lbl = item.get("label", "")
@@ -292,16 +285,14 @@ def build_hero_svg(cfg: dict[str, Any], theme_name: str) -> str:
     <clipPath id="avatar-scallop-clip">
       <path d="{inner_scallop}"/>
     </clipPath>
+    <linearGradient id="frame-grad" x1="40" y1="40" x2="220" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="{t['primary']}"/>
+      <stop offset="100%" stop-color="{t['tertiary']}"/>
+    </linearGradient>
     <style>
-      .role-a {{
-        animation: swapA 9s ease-in-out infinite;
-      }}
-      .role-b {{
-        animation: swapB 9s ease-in-out infinite;
-      }}
-      .caret {{
-        animation: blink 1s steps(2, start) infinite;
-      }}
+      .role-a {{ animation: swapA 9s ease-in-out infinite; }}
+      .role-b {{ animation: swapB 9s ease-in-out infinite; }}
+      .caret {{ animation: blink 1s steps(2, start) infinite; }}
       @keyframes swapA {{
         0%, 44% {{ opacity: 1; }}
         50%, 94% {{ opacity: 0; }}
@@ -320,33 +311,23 @@ def build_hero_svg(cfg: dict[str, Any], theme_name: str) -> str:
   </defs>
 
   <g clip-path="url(#hero-clip)">
-    <!-- Borderless M3 Surface Container -->
     <rect x="0" y="0" width="{w}" height="{h}" rx="34" fill="{t['surfaceContainer']}"/>
 
-    <!-- Animated M3 Expressive Right Shapes -->
-    <g opacity="0.72">
-      <path d="{right_blob}" fill="{t['heroShapeC']}">
-        <animateTransform attributeName="transform" type="rotate" from="0 788 66" to="360 788 66" dur="42s" repeatCount="indefinite"/>
+    <g opacity="0.82">
+      <path d="{blob_top}" fill="{t['blobC']}">
+        <animateTransform attributeName="transform" type="rotate" from="0 792 64" to="360 792 64" dur="44s" repeatCount="indefinite"/>
       </path>
     </g>
-    <g opacity="0.78">
-      <path d="{right_clover}" fill="{t['heroShapeB']}">
-        <animateTransform attributeName="transform" type="rotate" from="360 732 214" to="0 732 214" dur="28s" repeatCount="indefinite"/>
+    <g opacity="0.86">
+      <path d="{blob_bot}" fill="{t['blobB']}">
+        <animateTransform attributeName="transform" type="rotate" from="360 728 224" to="0 728 224" dur="30s" repeatCount="indefinite"/>
       </path>
     </g>
-    <g opacity="0.65">
-      <path d="{right_gear}" fill="{t['heroShapeA']}">
-        <animateTransform attributeName="transform" type="rotate" from="0 816 174" to="360 816 174" dur="18s" repeatCount="indefinite"/>
-      </path>
-    </g>
-    <path d="{spark}" fill="{t['primary']}">
-      <animate attributeName="opacity" values="0.45;1;0.45" dur="3.4s" repeatCount="indefinite"/>
-    </path>
   </g>
 
-  <!-- Rotating Scalloped M3 Avatar Frame + Stationary Avatar -->
+  <!-- Rotating Scalloped Frame + Stationary Avatar -->
   <g>
-    <path d="{outer_scallop}" fill="{t['primary']}">
+    <path d="{outer_scallop}" fill="url(#frame-grad)">
       <animateTransform attributeName="transform" type="rotate" from="0 {ax} {ay}" to="360 {ax} {ay}" dur="26s" repeatCount="indefinite"/>
     </path>
   </g>
@@ -354,23 +335,42 @@ def build_hero_svg(cfg: dict[str, Any], theme_name: str) -> str:
     {avatar_inner}
   </g>
 
-  <!-- Headline & Animated Subtitle -->
-  <text x="248" y="68" font-family="{FONT_SANS}" font-size="18" font-weight="500" fill="{t['onSurfaceVariant']}">Hi, I'm</text>
-  <text x="248" y="122" font-family="{FONT_SANS}" font-size="52" font-weight="800" letter-spacing="-1.5" fill="{t['onSurface']}">{esc(name)}</text>
+  <!-- Clean Display Typography -->
+  <text x="256" y="68" font-family="{FONT_SANS}" font-size="18" font-weight="500" fill="{t['onSurfaceVariant']}">Hi, I'm</text>
+  <text x="256" y="124" font-family="{FONT_SANS}" font-size="54" font-weight="800" letter-spacing="-1.6" fill="{t['onSurface']}">{esc(name)}</text>
 
-  <!-- Crossfading Role Lines + Blinking Cursor -->
-  <text class="role-a" x="248" y="158" font-family="{FONT_SANS}" font-size="17.5" font-weight="500" fill="{t['onSurfaceVariant']}">{esc(role)}</text>
-  <text class="role-b" x="248" y="158" font-family="{FONT_SANS}" font-size="17.5" font-weight="500" fill="{t['primary']}" opacity="0">{esc(alt_role)}</text>
-  <rect class="caret" x="{caret_x:.1f}" y="142" width="2.8" height="20" rx="1.4" fill="{t['primary']}"/>
+  <!-- Animated Subtitle + Caret -->
+  <text class="role-a" x="256" y="160" font-family="{FONT_SANS}" font-size="17.5" font-weight="500" fill="{t['onSurfaceVariant']}">{esc(role)}</text>
+  <text class="role-b" x="256" y="160" font-family="{FONT_SANS}" font-size="17.5" font-weight="500" fill="{t['primary']}" opacity="0">{esc(alt_role)}</text>
+  <rect class="caret" x="{caret_x:.1f}" y="144" width="2.8" height="20" rx="1.4" fill="{t['primary']}"/>
 
-  <!-- 3 M3 Tonal Chips -->
   {''.join(chips_svg)}
 """
     return svg_wrap(w, h, body)
 
 
+def build_social_pill_svg(social: dict[str, Any], theme_name: str, width: int = 276) -> str:
+    """Cohesive Material 3 tonal dock pill button (matching surfaceContainer + tinted icon)."""
+    t = THEMES[theme_name]
+    w, h = width, 60
+    label = social.get("label", "Link")
+    handle = social.get("handle", "")
+    icon_name = social.get("icon", "globe")
+    tone = social.get("tone", "primary")
+    bg, fg = tone_colors(t, tone)
+
+    body = f"""
+  <rect x="0" y="0" width="{w}" height="{h}" rx="30" fill="{t['surfaceContainer']}"/>
+  <circle cx="30" cy="30" r="19" fill="{bg}"/>
+  {render_icon(icon_name, 20, 20, 20, fg)}
+  <text x="60" y="27" font-family="{FONT_SANS}" font-size="14.5" font-weight="700" fill="{t['onSurface']}">{esc(label)}</text>
+  <text x="60" y="45" font-family="{FONT_SANS}" font-size="12" font-weight="500" fill="{t['onSurfaceVariant']}">{esc(handle)}</text>
+  <path d="M{w - 30} 35l8-8M{w - 28} 27h6v6" fill="none" stroke="{t['onSurfaceVariant']}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>
+"""
+    return svg_wrap(w, h, body)
+
+
 def build_about_svg(cfg: dict[str, Any], theme_name: str) -> str:
-    """Material 3 Expressive List Card (borderless Surface Container + tonal rows)."""
     t = THEMES[theme_name]
     w = 860
     about = cfg.get("about", {})
@@ -382,12 +382,12 @@ def build_about_svg(cfg: dict[str, Any], theme_name: str) -> str:
 
     rows_svg = []
     ry = 80
-    for idx, row in enumerate(rows):
+    for row in rows:
         bg, fg = tone_colors(t, row.get("tone", "primary"))
         icon_name = row.get("icon", "sparkles")
         txt = row.get("text", "")
         rows_svg.append(
-            f'<rect x="26" y="{ry}" width="{w - 52}" height="42" rx="21" fill="{t["surfaceContainerHigh"]}"/>'
+            f'<rect x="26" y="{ry}" width="{w - 52}" height="42" rx="18" fill="{t["surfaceContainerHigh"]}"/>'
             f'<circle cx="48" cy="{ry + 21}" r="14" fill="{bg}"/>'
             f'{render_icon(icon_name, 40, ry + 13, 16, fg)}'
             f'<text x="74" y="{ry + 26}" font-family="{FONT_SANS}" font-size="14.5" font-weight="500" fill="{t["onSurface"]}">{esc(txt)}</text>'
@@ -397,7 +397,6 @@ def build_about_svg(cfg: dict[str, Any], theme_name: str) -> str:
     body = f"""
   <rect x="0" y="0" width="{w}" height="{h}" rx="34" fill="{t['surfaceContainer']}"/>
 
-  <!-- Animated Scallop Header Badge -->
   <g>
     <path d="{badge_scallop}" fill="{t['primaryContainer']}">
       <animateTransform attributeName="transform" type="rotate" from="0 46 44" to="360 46 44" dur="22s" repeatCount="indefinite"/>
@@ -412,9 +411,9 @@ def build_about_svg(cfg: dict[str, Any], theme_name: str) -> str:
 
 
 def build_project_svg(project: dict[str, Any], theme_name: str) -> str:
-    """Material 3 Expressive Filled Card with animated nested tonal header."""
+    """Clean, high-craft Material 3 Project Card with animated scalloped emblem (no skeleton placeholders)."""
     t = THEMES[theme_name]
-    w, h = 422, 244
+    w, h = 422, 206
     name = project.get("name", "Project")
     tag = project.get("tag", "Project")
     desc = project.get("description", ["", ""])
@@ -424,72 +423,70 @@ def build_project_svg(project: dict[str, Any], theme_name: str) -> str:
     motif = project.get("motif", "octo")
     tone = project.get("tone", "primary")
 
-    header_bg, header_fg = tone_colors(t, tone)
-    accent = t["primary"] if tone == "primary" else t["secondary"]
+    chip_bg, chip_fg = tone_colors(t, tone)
+    accent = accent_color(t, tone)
 
     if motif == "octo":
-        art = (
-            f'<circle cx="326" cy="56" r="54" fill="{accent}" opacity="0.16">'
-            f'<animate attributeName="r" values="50;58;50" dur="5s" repeatCount="indefinite"/>'
-            f'</circle>'
+        emblem = (
             f'<g>'
-            f'<path d="{scalloped_path(68, 54, r_base=30, amp=4.2, lobes=10)}" fill="{accent}">'
-            f'<animateTransform attributeName="transform" type="rotate" from="0 68 54" to="360 68 54" dur="20s" repeatCount="indefinite"/>'
+            f'<path d="{scalloped_path(49, 49, r_base=24, amp=3.2, lobes=10)}" fill="{chip_bg}">'
+            f'<animateTransform attributeName="transform" type="rotate" from="0 49 49" to="360 49 49" dur="22s" repeatCount="indefinite"/>'
             f'</path>'
             f'</g>'
-            f'<polygon points="62,43 62,65 80,54" fill="{header_bg}"/>'
-            f'<rect x="114" y="34" width="96" height="14" rx="7" fill="{header_fg}" opacity="0.24"/>'
-            f'<rect x="114" y="56" width="66" height="14" rx="7" fill="{header_fg}" opacity="0.15"/>'
+            f'<polygon points="44,40 44,58 58,49" fill="{chip_fg}"/>'
         )
+        corner_shape = scalloped_path(384, 174, r_base=58, amp=11.0, lobes=6)
     else:
-        art = (
-            f'<rect x="274" y="18" width="112" height="72" rx="36" fill="{accent}" opacity="0.16"/>'
+        emblem = (
             f'<g>'
-            f'<path d="{scalloped_path(68, 54, r_base=30, amp=5.2, lobes=4)}" fill="{accent}">'
-            f'<animateTransform attributeName="transform" type="rotate" from="360 68 54" to="0 68 54" dur="24s" repeatCount="indefinite"/>'
+            f'<path d="{scalloped_path(49, 49, r_base=24, amp=3.8, lobes=4)}" fill="{chip_bg}">'
+            f'<animateTransform attributeName="transform" type="rotate" from="360 49 49" to="0 49 49" dur="26s" repeatCount="indefinite"/>'
             f'</path>'
             f'</g>'
             f'<g>'
-            f'<path d="M68 42v18m0 0l-7-7m7 7l7-7" stroke="{header_bg}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
-            f'<animateTransform attributeName="transform" type="translate" values="0 -2; 0 3; 0 -2" dur="2.2s" repeatCount="indefinite"/>'
+            f'<path d="M49 39v16m0 0l-6-6m6 6l6-6" stroke="{chip_fg}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
+            f'<animateTransform attributeName="transform" type="translate" values="0 -2; 0 2.5; 0 -2" dur="2.2s" repeatCount="indefinite"/>'
             f'</path>'
             f'</g>'
-            f'<rect x="114" y="34" width="108" height="14" rx="7" fill="{header_fg}" opacity="0.24"/>'
-            f'<rect x="114" y="56" width="76" height="14" rx="7" fill="{header_fg}" opacity="0.15"/>'
         )
+        corner_shape = scalloped_path(384, 174, r_base=58, amp=12.0, lobes=4)
 
-    tag_w = estimate_text_width(tag, 12.0, bold=True) + 22.0
+    tag_w = estimate_text_width(tag, 11.5, bold=True) + 20.0
     badge_w = estimate_text_width(badge, 12.0, bold=True) + 24.0
 
     body = f"""
   <defs>
-    <clipPath id="art-clip">
-      <rect x="12" y="12" width="{w - 24}" height="84" rx="22"/>
+    <clipPath id="proj-clip">
+      <rect x="0" y="0" width="{w}" height="{h}" rx="32"/>
     </clipPath>
   </defs>
 
-  <rect x="0" y="0" width="{w}" height="{h}" rx="32" fill="{t['surfaceContainer']}"/>
-
-  <g clip-path="url(#art-clip)">
-    <rect x="12" y="12" width="{w - 24}" height="84" rx="22" fill="{header_bg}"/>
-    {art}
+  <g clip-path="url(#proj-clip)">
+    <rect x="0" y="0" width="{w}" height="{h}" rx="32" fill="{t['surfaceContainer']}"/>
+    <path d="{corner_shape}" fill="{chip_bg}" opacity="0.45">
+      <animateTransform attributeName="transform" type="rotate" from="0 384 174" to="360 384 174" dur="38s" repeatCount="indefinite"/>
+    </path>
   </g>
 
-  <circle cx="378" cy="54" r="18" fill="{t['surfaceContainerLowest']}" opacity="0.92"/>
-  <path d="M373 59l10-10M375 49h8v8" fill="none" stroke="{t['onSurface']}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Emblem + Title + Open Pill -->
+  {emblem}
+  <text x="86" y="45" font-family="{FONT_SANS}" font-size="20" font-weight="700" letter-spacing="-0.3" fill="{t['onSurface']}">{esc(name)}</text>
+  <rect x="86" y="54" width="{tag_w:.1f}" height="22" rx="11" fill="{t['surfaceContainerHigh']}"/>
+  <text x="{86 + tag_w / 2:.1f}" y="68.5" text-anchor="middle" font-family="{FONT_SANS}" font-size="11.5" font-weight="600" fill="{t['onSurfaceVariant']}">{esc(tag)}</text>
 
-  <text x="24" y="132" font-family="{FONT_SANS}" font-size="21" font-weight="700" letter-spacing="-0.3" fill="{t['onSurface']}">{esc(name)}</text>
-  <rect x="{w - 24 - tag_w:.1f}" y="112" width="{tag_w:.1f}" height="26" rx="13" fill="{t['surfaceContainerHigh']}"/>
-  <text x="{w - 24 - tag_w / 2:.1f}" y="129" text-anchor="middle" font-family="{FONT_SANS}" font-size="12" font-weight="600" fill="{t['onSurfaceVariant']}">{esc(tag)}</text>
+  <circle cx="380" cy="46" r="18" fill="{t['surfaceContainerHigh']}"/>
+  <path d="M375 51l10-10M377 41h8v8" fill="none" stroke="{accent}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <text x="24" y="162" font-family="{FONT_SANS}" font-size="14" fill="{t['onSurfaceVariant']}">{esc(desc[0] if len(desc) > 0 else "")}</text>
-  <text x="24" y="182" font-family="{FONT_SANS}" font-size="14" fill="{t['onSurfaceVariant']}">{esc(desc[1] if len(desc) > 1 else "")}</text>
+  <!-- Description -->
+  <text x="26" y="114" font-family="{FONT_SANS}" font-size="14.2" fill="{t['onSurfaceVariant']}">{esc(desc[0] if len(desc) > 0 else "")}</text>
+  <text x="26" y="135" font-family="{FONT_SANS}" font-size="14.2" fill="{t['onSurfaceVariant']}">{esc(desc[1] if len(desc) > 1 else "")}</text>
 
-  <circle cx="31" cy="215" r="5.5" fill="{esc(lang_color)}"/>
-  <text x="44" y="219.5" font-family="{FONT_SANS}" font-size="13.5" font-weight="600" fill="{t['onSurface']}">{esc(lang)}</text>
+  <!-- Bottom Bar -->
+  <circle cx="33" cy="174" r="5.5" fill="{esc(lang_color)}"/>
+  <text x="46" y="178.5" font-family="{FONT_SANS}" font-size="13.5" font-weight="600" fill="{t['onSurface']}">{esc(lang)}</text>
 
-  <rect x="{w - 24 - badge_w:.1f}" y="200" width="{badge_w:.1f}" height="28" rx="14" fill="{header_bg}"/>
-  <text x="{w - 24 - badge_w / 2:.1f}" y="218" text-anchor="middle" font-family="{FONT_SANS}" font-size="12" font-weight="700" fill="{header_fg}">{esc(badge)}</text>
+  <rect x="{w - 26 - badge_w:.1f}" y="160" width="{badge_w:.1f}" height="28" rx="14" fill="{chip_bg}"/>
+  <text x="{w - 26 - badge_w / 2:.1f}" y="178" text-anchor="middle" font-family="{FONT_SANS}" font-size="12" font-weight="700" fill="{chip_fg}">{esc(badge)}</text>
 """
     return svg_wrap(w, h, body)
 
@@ -504,25 +501,25 @@ def build_stats_svg(cfg: dict[str, Any], theme_name: str) -> str:
 
     stats = cfg.get("stats", {})
     metrics = [
-        ("Commits / Year", stats.get("contributions", "203"), "primary"),
-        ("Repositories", stats.get("repos", "13"), "secondary"),
-        ("Public Stars", stats.get("stars", "6"), "tertiary"),
-        ("Followers", stats.get("followers", "1"), "surface"),
+        ("Commits / Year", stats.get("contributions", "203"), t["primary"]),
+        ("Repositories", stats.get("repos", "13"), t["secondary"]),
+        ("Public Stars", stats.get("stars", "6"), t["tertiary"]),
+        ("Followers", stats.get("followers", "1"), t["primary"]),
     ]
 
     tiles_svg = []
     tile_w = 172
     tile_h = 56
-    for idx, (label, val, tone) in enumerate(metrics):
+    for idx, (label, val, dot_color) in enumerate(metrics):
         col = idx % 2
         row = idx // 2
         tx = 24 + col * (tile_w + 14)
         ty = 78 + row * (tile_h + 12)
-        bg, fg = tone_colors(t, tone)
         tiles_svg.append(
-            f'<rect x="{tx}" y="{ty}" width="{tile_w}" height="{tile_h}" rx="20" fill="{bg}"/>'
-            f'<text x="{tx + 16}" y="{ty + 28}" font-family="{FONT_SANS}" font-size="20" font-weight="800" fill="{fg}">{esc(val)}</text>'
-            f'<text x="{tx + 16}" y="{ty + 45}" font-family="{FONT_SANS}" font-size="11.5" font-weight="600" fill="{fg}" opacity="0.82">{esc(label)}</text>'
+            f'<rect x="{tx}" y="{ty}" width="{tile_w}" height="{tile_h}" rx="20" fill="{t["surfaceContainerHigh"]}"/>'
+            f'<circle cx="{tx + tile_w - 20}" cy="{ty + 20}" r="4.5" fill="{dot_color}"/>'
+            f'<text x="{tx + 16}" y="{ty + 29}" font-family="{FONT_SANS}" font-size="21" font-weight="800" fill="{t["onSurface"]}">{esc(val)}</text>'
+            f'<text x="{tx + 16}" y="{ty + 46}" font-family="{FONT_SANS}" font-size="11.5" font-weight="600" fill="{t["onSurfaceVariant"]}">{esc(label)}</text>'
         )
 
     langs: list[dict[str, Any]] = stats.get("languages", [])
@@ -530,7 +527,7 @@ def build_stats_svg(cfg: dict[str, Any], theme_name: str) -> str:
     bar_x = right_x + 26.0
     bar_y = 84.0
     bar_w = right_w - 52.0
-    bar_h = 16.0
+    bar_h = 14.0
     seg_gap = 5.0
     usable_w = bar_w - seg_gap * max(0, len(langs) - 1)
 
@@ -542,14 +539,14 @@ def build_stats_svg(cfg: dict[str, Any], theme_name: str) -> str:
         seg_w = max(18.0, usable_w * (pct / total_pct))
         c = lang.get(f"color_{theme_name}", t["primary"])
         bars_svg.append(
-            f'<rect x="{cur_x:.1f}" y="{bar_y:.1f}" width="{seg_w:.1f}" height="{bar_h:.1f}" rx="8" fill="{esc(c)}"/>'
+            f'<rect x="{cur_x:.1f}" y="{bar_y:.1f}" width="{seg_w:.1f}" height="{bar_h:.1f}" rx="7" fill="{esc(c)}"/>'
         )
         cur_x += seg_w + seg_gap
 
         col = idx % 2
         row = idx // 2
         lx = right_x + 26 + col * 194
-        ly = 122 + row * 38
+        ly = 120 + row * 38
         legend_svg.append(
             f'<rect x="{lx}" y="{ly}" width="180" height="30" rx="15" fill="{t["surfaceContainerHigh"]}"/>'
             f'<circle cx="{lx + 15}" cy="{ly + 15}" r="5" fill="{esc(c)}"/>'
@@ -557,8 +554,7 @@ def build_stats_svg(cfg: dict[str, Any], theme_name: str) -> str:
             f'<text x="{lx + 166}" y="{ly + 19.5}" text-anchor="end" font-family="{FONT_SANS}" font-size="12.5" font-weight="700" fill="{t["onSurfaceVariant"]}">{int(round(pct))}%</text>'
         )
 
-    # Flowing animated wavy line (extended pattern clipped cleanly)
-    wavy = wavy_line_path(right_x + 20, w + 40, 204, amp=3.4, wavelength=26.0)
+    wavy = wavy_line_path(right_x + 20, w + 40, 204, amp=3.2, wavelength=26.0)
 
     body = f"""
   <defs>
@@ -580,8 +576,37 @@ def build_stats_svg(cfg: dict[str, Any], theme_name: str) -> str:
   {''.join(bars_svg)}
   {''.join(legend_svg)}
   <g clip-path="url(#wave-clip)">
-    <path d="{wavy}" stroke="{t['primary']}" stroke-width="2.8" stroke-linecap="round" opacity="0.62">
-      <animateTransform attributeName="transform" type="translate" from="0 0" to="-26 0" dur="2.2s" repeatCount="indefinite"/>
+    <path d="{wavy}" stroke="{t['primary']}" stroke-width="2.6" stroke-linecap="round" opacity="0.55">
+      <animateTransform attributeName="transform" type="translate" from="0 0" to="-26 0" dur="2.4s" repeatCount="indefinite"/>
+    </path>
+  </g>
+"""
+    return svg_wrap(w, h, body)
+
+
+def build_footer_svg(theme_name: str) -> str:
+    t = THEMES[theme_name]
+    w, h = 860, 32
+    wavy_l = wavy_line_path(24, 422, 16, amp=3.5, wavelength=28.0)
+    wavy_r = wavy_line_path(464, 864, 16, amp=3.5, wavelength=28.0)
+    spark = four_point_star_path(430, 16, r_outer=10, r_inner=3.5)
+
+    body = f"""
+  <defs>
+    <clipPath id="wave-l"><rect x="24" y="4" width="372" height="24"/></clipPath>
+    <clipPath id="wave-r"><rect x="464" y="4" width="372" height="24"/></clipPath>
+  </defs>
+  <g clip-path="url(#wave-l)">
+    <path d="{wavy_l}" stroke="{t['primary']}" stroke-width="2.6" stroke-linecap="round" opacity="0.45">
+      <animateTransform attributeName="transform" type="translate" from="0 0" to="-28 0" dur="2.8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  <path d="{spark}" fill="{t['secondary']}">
+    <animateTransform attributeName="transform" type="rotate" from="0 430 16" to="360 430 16" dur="12s" repeatCount="indefinite"/>
+  </path>
+  <g clip-path="url(#wave-r)">
+    <path d="{wavy_r}" stroke="{t['secondary']}" stroke-width="2.6" stroke-linecap="round" opacity="0.55">
+      <animateTransform attributeName="transform" type="translate" from="-28 0" to="0 0" dur="2.8s" repeatCount="indefinite"/>
     </path>
   </g>
 """
@@ -596,61 +621,12 @@ def social_pill_width(count: int) -> int:
     return 204
 
 
-def build_social_pill_svg(social: dict[str, Any], theme_name: str, width: int = 276) -> str:
-    t = THEMES[theme_name]
-    w, h = width, 64
-    label = social.get("label", "Link")
-    handle = social.get("handle", "")
-    icon_name = social.get("icon", "globe")
-    tone = social.get("tone", "surface")
-    bg, fg = tone_colors(t, tone)
-
-    body = f"""
-  <rect x="0" y="0" width="{w}" height="{h}" rx="32" fill="{bg}"/>
-  <circle cx="32" cy="32" r="18" fill="{t['surfaceContainerLowest']}" opacity="0.90"/>
-  {render_icon(icon_name, 22, 22, 20, t['primary'] if tone == 'surface' else fg)}
-  <text x="62" y="29" font-family="{FONT_SANS}" font-size="15" font-weight="700" fill="{fg}">{esc(label)}</text>
-  <text x="62" y="47" font-family="{FONT_SANS}" font-size="12.5" font-weight="500" fill="{fg}" opacity="0.82">{esc(handle)}</text>
-  <path d="M{w - 30} 37l8-8M{w - 28} 29h6v6" fill="none" stroke="{fg}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>
-"""
-    return svg_wrap(w, h, body)
-
-
-def build_footer_svg(theme_name: str) -> str:
-    t = THEMES[theme_name]
-    w, h = 860, 36
-    wavy_l = wavy_line_path(24, 422, 18, amp=3.8, wavelength=28.0)
-    wavy_r = wavy_line_path(464, 864, 18, amp=3.8, wavelength=28.0)
-    spark = four_point_star_path(430, 18, r_outer=11, r_inner=3.8)
-
-    body = f"""
-  <defs>
-    <clipPath id="wave-l"><rect x="24" y="6" width="372" height="24"/></clipPath>
-    <clipPath id="wave-r"><rect x="464" y="6" width="372" height="24"/></clipPath>
-  </defs>
-  <g clip-path="url(#wave-l)">
-    <path d="{wavy_l}" stroke="{t['primary']}" stroke-width="2.8" stroke-linecap="round" opacity="0.55">
-      <animateTransform attributeName="transform" type="translate" from="0 0" to="-28 0" dur="2.6s" repeatCount="indefinite"/>
-    </path>
-  </g>
-  <path d="{spark}" fill="{t['secondary']}">
-    <animateTransform attributeName="transform" type="rotate" from="0 430 18" to="360 430 18" dur="12s" repeatCount="indefinite"/>
-  </path>
-  <g clip-path="url(#wave-r)">
-    <path d="{wavy_r}" stroke="{t['secondary']}" stroke-width="2.8" stroke-linecap="round" opacity="0.65">
-      <animateTransform attributeName="transform" type="translate" from="-28 0" to="0 0" dur="2.6s" repeatCount="indefinite"/>
-    </path>
-  </g>
-"""
-    return svg_wrap(w, h, body)
-
-
 def picture_tag(base_name: str, alt: str, width: str = "100%") -> str:
     return (
         f'<picture>\n'
-        f'    <source media="(prefers-color-scheme: dark)" srcset="./assets/{base_name}-dark.svg" />\n'
-        f'    <source media="(prefers-color-scheme: light)" srcset="./assets/{base_name}-light.svg" />\n'
-        f'    <img alt="{esc(alt)}" src="./assets/{base_name}-light.svg" width="{width}" />\n'
+        f'    <source media="(prefers-color-scheme: dark)" srcset="./assets/{ASSET_VERSION}/{base_name}-dark.svg" />\n'
+        f'    <source media="(prefers-color-scheme: light)" srcset="./assets/{ASSET_VERSION}/{base_name}-light.svg" />\n'
+        f'    <img alt="{esc(alt)}" src="./assets/{ASSET_VERSION}/{base_name}-light.svg" width="{width}" />\n'
         f'  </picture>'
     )
 
@@ -660,7 +636,6 @@ def build_readme(cfg: dict[str, Any]) -> str:
     projects: list[dict[str, Any]] = cfg.get("projects", [])
     socials: list[dict[str, Any]] = cfg.get("socials", [])
 
-    # Use 48% so 2 project cards ALWAYS sit side-by-side inside GitHub's Profile Overview
     proj_pct = "48%" if len(projects) >= 2 else "100%"
     project_rows = []
     for i in range(0, len(projects), 2):
@@ -691,11 +666,11 @@ def build_readme(cfg: dict[str, Any]) -> str:
         )
 
     sections = [
-        f'<p align="center">\n  {picture_tag("hero", f"{name} — Material 3 Expressive Header", width="100%")}\n</p>',
+        f'<p align="center">\n  {picture_tag("hero", f"{name} profile header", width="100%")}\n</p>',
+        '<p align="center">\n  ' + "\n  &nbsp;\n  ".join(social_links) + "\n</p>",
         f'<p align="center">\n  {picture_tag("about", "About me", width="100%")}\n</p>',
         "\n".join(project_rows),
         f'<p align="center">\n  {picture_tag("stats", "GitHub Snapshot & Top Languages", width="100%")}\n</p>',
-        '<p align="center">\n  ' + "\n  &nbsp;\n  ".join(social_links) + "\n</p>",
         f'<p align="center">\n  {picture_tag("footer", "Divider", width="100%")}\n</p>',
     ]
     return "\n\n".join(sections) + "\n"
@@ -704,7 +679,7 @@ def build_readme(cfg: dict[str, Any]) -> str:
 def fetch_github_stats(username: str) -> dict[str, Any]:
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "md3-expressive-readme-generator",
+        "User-Agent": "profile-readme-generator",
     }
     token = os.environ.get("GITHUB_TOKEN")
     if token:
@@ -733,9 +708,9 @@ def fetch_github_stats(username: str) -> dict[str, Any]:
     total_lang = sum(v for _, v in top_sorted) or 1
     palette_pairs = [
         ("#6750A4", "#D0BCFF"),
-        ("#006B5E", "#7ADBC8"),
+        ("#236B5D", "#9AD9C8"),
         ("#4F5D95", "#B8C4FF"),
-        ("#7D5260", "#EFB8C8"),
+        ("#82495D", "#F0B7C8"),
     ]
     languages = []
     for idx, (lname, lval) in enumerate(top_sorted):
@@ -758,13 +733,17 @@ def fetch_github_stats(username: str) -> dict[str, Any]:
 
 
 def generate_all(cfg: dict[str, Any]) -> list[Path]:
+    # Clean legacy SVG files in assets/ root so only assets/v3/ remains
+    if ASSETS_BASE.exists():
+        for old in ASSETS_BASE.glob("*.svg"):
+            old.unlink()
+    if ASSETS_DIR.exists():
+        shutil.rmtree(ASSETS_DIR)
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
     written: list[Path] = []
     socials = cfg.get("socials", [])
     soc_w = social_pill_width(len(socials))
-
-    for old_svg in ASSETS_DIR.glob("*.svg"):
-        old_svg.unlink()
 
     for theme_name in ("light", "dark"):
         files = {
@@ -789,13 +768,9 @@ def generate_all(cfg: dict[str, Any]) -> list[Path]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate MD3 Expressive GitHub Profile README & SVGs.")
+    parser = argparse.ArgumentParser(description="Generate animated M3 GitHub Profile README & SVGs.")
     parser.add_argument("--config", type=Path, default=CONFIG_PATH, help="Path to profile.config.json")
-    parser.add_argument(
-        "--fetch-github",
-        action="store_true",
-        help="Fetch live stars, followers, and languages from GitHub API",
-    )
+    parser.add_argument("--fetch-github", action="store_true", help="Fetch live stats from GitHub API")
     args = parser.parse_args()
 
     cfg = json.loads(args.config.read_text(encoding="utf-8"))
@@ -820,7 +795,7 @@ def main() -> None:
             print(f"Warning: could not fetch GitHub stats ({exc}); using existing config values.")
 
     written = generate_all(cfg)
-    print(f"Generated {len(written)} files in {ROOT_DIR}")
+    print(f"Generated {len(written)} files in {ASSETS_DIR}")
 
 
 if __name__ == "__main__":
