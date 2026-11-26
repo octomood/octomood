@@ -1,9 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="276" height="58" viewBox="0 0 276 58" fill="none" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="276" height="64" viewBox="0 0 276 64" fill="none" role="img">
 
-  <rect x="1" y="1" width="274" height="56" rx="28" fill="#005046"/>
-  <circle cx="29" cy="29" r="17" fill="#0F0D13" opacity="0.88"/>
-  <g transform="translate(19.00, 19.00) scale(0.8333)"><path d="M21 3L3 10.5l6.5 2.6L17 7.5l-5.6 7.5 6.6 5L21 3z" fill="#9FFAE5"/></g>
-  <text x="56" y="25.5" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13.5" font-weight="700" fill="#9FFAE5">Telegram</text>
-  <text x="56" y="42" font-family="'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11" font-weight="500" fill="#9FFAE5" opacity="0.82">@itschur</text>
+  <rect x="0" y="0" width="276" height="64" rx="32" fill="#134D44"/>
+  <circle cx="32" cy="32" r="18" fill="#0F0D13" opacity="0.90"/>
+  <g transform="translate(22.00, 22.00) scale(0.8333)"><path d="M21 3L3 10.5l6.5 2.6L17 7.5l-5.6 7.5 6.6 5L21 3z" fill="#B8F3E5"/></g>
+  <text x="62" y="29" font-family="'Google Sans', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="15" font-weight="700" fill="#B8F3E5">Telegram</text>
+  <text x="62" y="47" font-family="'Google Sans', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12.5" font-weight="500" fill="#B8F3E5" opacity="0.82">@itschur</text>
+  <path d="M246 37l8-8M248 29h6v6" fill="none" stroke="#B8F3E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>
 
 </svg>
