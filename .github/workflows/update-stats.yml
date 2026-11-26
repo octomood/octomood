@@ -1,0 +1,37 @@
+name: Update MD3 Profile Stats
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "profile.config.json"
+      - "generate_assets.py"
+
+permissions:
+  contents: write
+
+jobs:
+  update-profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Regenerate MD3 Expressive SVGs & README
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 generate_assets.py --fetch-github
+
+      - name: Commit updated assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/ README.md profile.config.json
+          git diff --cached --quiet || git commit -m "chore: refresh MD3 Expressive profile stats"
+          git push

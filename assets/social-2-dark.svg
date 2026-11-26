@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="276" height="58" viewBox="0 0 276 58" fill="none" role="img">
+
+  <rect x="1" y="1" width="274" height="56" rx="28" fill="#005046"/>
+  <circle cx="29" cy="29" r="17" fill="#0F0D13" opacity="0.88"/>
+  <g transform="translate(19.00, 19.00) scale(0.8333)"><path d="M21 3L3 10.5l6.5 2.6L17 7.5l-5.6 7.5 6.6 5L21 3z" fill="#9FFAE5"/></g>
+  <text x="56" y="25.5" font-family="'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13.5" font-weight="700" fill="#9FFAE5">Telegram</text>
+  <text x="56" y="42" font-family="'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11" font-weight="500" fill="#9FFAE5" opacity="0.82">@itschur</text>
+
+</svg>
