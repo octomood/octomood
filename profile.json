@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "login": "octomood",
+  "seed": "#FF5CA8",
+  "scheme": "expressive",
+  "motion": true,
+  "iconFill": true,
+  "order": [
+    "hero",
+    "socials",
+    "about",
+    "projects",
+    "stats",
+    "streak",
+    "wave",
+    "buttons"
+  ],
+  "hidden": [
+    "stack"
+  ],
+  "hero": {
+    "greeting": "Hi, I'm",
+    "name": "churros",
+    "subtitle": "Desktop shells, Telegram bots & web apps.",
+    "typing": true,
+    "avatarShape": "cookie12",
+    "chips": [
+      { "icon": "person", "label": "@octomood" },
+      { "icon": "bolt", "label": "TikTok Octo & OctoLoad" }
+    ]
+  },
+  "about": {
+    "title": "About me",
+    "items": [
+      { "icon": "person", "label": "churros (@octomood) — developer" },
+      { "icon": "code", "label": "Code on whatever fits the idea best" },
+      { "icon": "desktop_windows", "label": "Native Electron shells, Telegram bots & web apps" },
+      { "icon": "brand:telegram", "label": "TG @itschur · Channel t.me/tiktok_octo" }
+    ]
+  },
+  "stack": {
+    "title": "Tech stack",
+    "groups": []
+  },
+  "projects": {
+    "source": "manual",
+    "repos": [
+      "tiktok-octo",
+      "octo-load"
+    ],
+    "overrides": {
+      "tiktok-octo": {
+        "icon": "desktop_windows",
+        "shape": "cookie12",
+        "text": "Unofficial TikTok desktop shell on Electron for Linux, Windows & macOS — real site in a native window, no API scraping."
+      },
+      "octo-load": {
+        "icon": "download",
+        "shape": "clover",
+        "text": "OctoLoad — Telegram bot for downloading video, audio, and photos by link."
+      }
+    },
+    "empty": "No description yet.",
+    "fork": "Fork"
+  },
+  "stats": {
+    "title": "GitHub activity",
+    "stars": "Stars earned",
+    "contributions": "Contributions this year",
+    "repos": "Repositories",
+    "followers": "Followers",
+    "calendar": "Last 21 days",
+    "weekdays": "SMTWTFS",
+    "languages": "Languages across my repositories",
+    "showLanguages": true
+  },
+  "streak": {
+    "title": "Streak",
+    "current": "Current streak",
+    "longest": "Longest this year",
+    "days": "days"
+  },
+  "socials": {
+    "items": [
+      { "icon": "brand:telegram", "url": "https://t.me/itschur" },
+      { "icon": "brand:tiktok", "url": "https://t.me/tiktok_octo" },
+      { "icon": "brand:github", "url": "https://github.com/octomood" }
+    ],
+    "variant": "chip",
+    "fill": "tonal",
+    "card": true
+  },
+  "buttons": {
+    "items": [
+      { "icon": "brand:telegram", "label": "Telegram · @itschur", "url": "https://t.me/itschur", "style": "filled" },
+      { "icon": "bolt", "label": "TikTok Octo · t.me/tiktok_octo", "url": "https://t.me/tiktok_octo", "style": "tonal" }
+    ],
+    "card": false
+  }
+}

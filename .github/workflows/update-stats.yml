@@ -1,8 +1,8 @@
-name: Update Profile Stats
+name: Update Profile
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -14,20 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
+          node-version: "22"
 
-      - name: Refresh stats and SVGs
+      - name: Render profile SVGs and README
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 generate_assets.py --fetch-github
+        run: node .github/scripts/render.mjs
 
       - name: Commit updated assets
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/ README.md profile.config.json
-          git diff --cached --quiet || git commit -m "chore: refresh profile stats"
-          git push
+          git add -A assets/ README.md .profile/
+          git diff --cached --quiet || (git commit -m "chore: update profile" && git push)
